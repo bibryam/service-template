@@ -1,0 +1,155 @@
+---
+apiVersion: "v1"
+kind: "Template"
+labels: {}
+metadata:
+  annotations:
+    description: "Example template service"
+    iconClass: "icon-jboss"
+  labels: {}
+  name: "service-template-prod"
+objects:
+- apiVersion: "v1"
+  kind: "Service"
+  metadata:
+    annotations: {}
+    labels:
+      app: "service-template"
+      artifact: "service-template"
+      version: "1.0.0-SNAPSHOT"
+      group: "com.ofbizian"
+    name: "service-template-service"
+  spec:
+    deprecatedPublicIPs: []
+    externalIPs: []
+    loadBalancerIP: ""
+    ports:
+    - port: 8080
+      protocol: "TCP"
+      targetPort: 8080
+    selector:
+      app: "service-template"
+    sessionAffinity: "None"
+    type: "ClusterIP"
+- apiVersion: "v1"
+  kind: "DeploymentConfig"
+  metadata:
+    annotations: {}
+    labels:
+      app: "service-template"
+      artifact: "service-template"
+      deploymentconfig: "service-template"
+      version: "1.0-SNAPSHOT"
+      group: "com.ofbizian"
+    name: "service-template"
+  spec:
+    replicas: 1
+    selector:
+      app: "service-template"
+      deploymentconfig: "service-template"
+    strategy:
+      annotations: {}
+      labels: {}
+      rollingParams:
+        maxSurge: "30%"
+        maxUnavailable: "20%"
+        timeoutSeconds: 240
+      type: "Rolling"
+    template:
+      metadata:
+        annotations: {}
+        labels:
+          app: "service-template"
+          artifact: "service-template"
+          deploymentconfig: "service-template"
+          version: "1.0-SNAPSHOT"
+          group: "com.ofbizian"
+      spec:
+        containers:
+        - args: []
+          command: []
+          env: []
+          image: "${SOURCE_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
+          imagePullPolicy: "Always"
+          livenessProbe:
+            exec:
+              command:
+              - "/bin/bash"
+              - "-c"
+              - "(curl -f 127.0.0.1:8080) >/dev/null 2>&1; test $? != 7"
+            initialDelaySeconds: 30
+            timeoutSeconds: 60
+          name: "service-template"
+          ports:
+          - containerPort: 8080
+            name: "http"
+            protocol: "TCP"
+          - containerPort: 8778
+            name: "jolokia"
+            protocol: "TCP"
+          readinessProbe:
+            exec:
+              command:
+              - "/bin/bash"
+              - "-c"
+              - "(curl -f 127.0.0.1:8080) >/dev/null 2>&1; test $? != 7"
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: "1024Mi"
+            requests:
+              memory: "512Mi"
+          volumeMounts:
+          - mountPath: "/etc/configmap"
+            name: "service-template-configmap"
+            readOnly: true
+          - mountPath: "/etc/secret"
+            name: "service-template-secret"
+            readOnly: true
+        imagePullSecrets: []
+        nodeSelector: {}
+        restartPolicy: "Always"
+        volumes:
+        - configMap:
+            items: []
+            name: "service-template"
+          name: "service-template-configmap"
+        - name: "service-template-secret"
+          secret:
+            secretName: "service-template"
+    triggers:
+    - type: "ConfigChange"
+    - imageChangeParams:
+        automatic: false
+        containerNames:
+        - "service-template"
+        from:
+          kind: "ImageStreamTag"
+          name: "${IMAGE_NAME}:${IMAGE_TAG}"
+          namespace: "${SOURCE_NAMESPACE}"
+      type: "ImageChange"
+- apiVersion: "v1"
+  kind: "Route"
+  metadata:
+    annotations: {}
+    labels:
+      app: "service-template"
+      artifact: "service-template"
+      version: "1.0-SNAPSHOT"
+      group: "com.ofbizian"
+    name: "service-template-route"
+  spec:
+    to:
+      kind: "Service"
+      name: "service-template-service"
+parameters:
+- displayName: "Image Name"
+  name: "IMAGE_NAME"
+  value: "service-template"
+- displayName: "Image Tag"
+  name: "IMAGE_TAG"
+  value: "stage"
+- displayName: "Source Namespace"
+  name: "SOURCE_NAMESPACE"
+  value: "staging"
